@@ -1,0 +1,10 @@
+services:
+  notification-service:
+    build: .
+    container_name: lynx-notification-service
+    ports:
+      - "127.0.0.1:8086:8086"
+    env_file:
+      - .env
+    environment:
+      SERVER_PORT: 8086

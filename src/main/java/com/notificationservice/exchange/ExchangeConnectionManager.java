@@ -1,18 +1,15 @@
 package com.notificationservice.exchange;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.notificationservice.service.NotificationDispatcherService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.client.WebSocketClient;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 
-/**
- * Startup component for establishing and maintaining the WebSocket connection to the exchange.
- * Initializes the connection during application startup using CommandLineRunner.
- */
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -20,24 +17,34 @@ public class ExchangeConnectionManager implements CommandLineRunner {
 
     private final NotificationDispatcherService notificationDispatcherService;
     private final InternalOrderForwarder internalOrderForwarder;
+    private final ObjectMapper objectMapper;
+
+    @Value("${exchange.ws-host}")
+    private String exchangeWsHost;
+
+    @Value("${exchange.api-key}")
+    private String exchangeApiKey;
+
+    @Value("${exchange.api-secret}")
+    private String exchangeApiSecret;
 
     @Override
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         log.info("Initializing exchange WebSocket connection...");
 
         new Thread(() -> {
             try {
-                WebSocketClient client = new StandardWebSocketClient();
-                String exchangeUri = "wss://mock-exchange-host/ws?api_key=mock_key&api_secret=mock_secret";
+                StandardWebSocketClient client = new StandardWebSocketClient();
+                String exchangeUri = exchangeWsHost + "?api_key=" + exchangeApiKey + "&api_secret=" + exchangeApiSecret;
 
                 ExchangeWebSocketHandler handler = new ExchangeWebSocketHandler(
                         notificationDispatcherService,
                         internalOrderForwarder,
-                        new ObjectMapper()
+                        objectMapper
                 );
 
-                client.doHandshake(handler, exchangeUri).get();
-                log.info("Successfully connected to exchange at: {}", exchangeUri);
+                client.execute(handler, exchangeUri).get();
+                log.info("Successfully connected to exchange WebSocket");
             } catch (Exception e) {
                 log.error("Failed to connect to exchange", e);
             }
