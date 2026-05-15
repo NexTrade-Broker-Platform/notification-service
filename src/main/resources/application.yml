@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8086}
+  port: ${SERVER_PORT:9006}
 
 internal:
   api-key: ${INTERNAL_API_KEY}
@@ -8,6 +8,7 @@ exchange:
   ws-host: ${EXCHANGE_WS_HOST}
   api-key: ${EXCHANGE_API_KEY}
   api-secret: ${EXCHANGE_API_SECRET}
+  rest-url: ${EXCHANGE_REST_URL:http://localhost:8085}
 
 jwt:
   secret: ${JWT_SECRET}

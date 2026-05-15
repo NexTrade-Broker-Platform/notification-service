@@ -16,28 +16,29 @@ public class FrontendWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        String userId = (String) session.getAttributes().get("userId");
+        String sessionId = session.getId();
+        webSocketNotificationSender.addSession(sessionId, session);
 
-        if (userId != null) {
-            String sessionId = session.getId();
+        String userId = (String) session.getAttributes().get("userId");
+        if (userId != null && !userId.isEmpty()) {
             sessionRegistryService.registerSession(userId, sessionId);
-            webSocketNotificationSender.addSession(sessionId, session);
-            log.info("Frontend client connected. User ID: {}, Session ID: {}", userId, sessionId);
+            log.info("Authenticated frontend client connected. User ID: {}, Session ID: {}", userId, sessionId);
         } else {
-            session.close(CloseStatus.POLICY_VIOLATION);
-            log.warn("Closing session: userId attribute missing after handshake");
+            log.info("Anonymous frontend client connected. Session ID: {}", sessionId);
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
-        String userId = (String) session.getAttributes().get("userId");
+        String sessionId = session.getId();
+        webSocketNotificationSender.removeSession(sessionId);
 
-        if (userId != null) {
-            String sessionId = session.getId();
+        String userId = (String) session.getAttributes().get("userId");
+        if (userId != null && !userId.isEmpty()) {
             sessionRegistryService.removeSession(userId, sessionId);
-            webSocketNotificationSender.removeSession(sessionId);
-            log.info("Frontend client disconnected. User ID: {}, Session ID: {}", userId, sessionId);
+            log.info("Authenticated frontend client disconnected. User ID: {}, Session ID: {}", userId, sessionId);
+        } else {
+            log.info("Anonymous frontend client disconnected. Session ID: {}", sessionId);
         }
     }
 }

@@ -20,20 +20,17 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
         String token = extractToken(request);
-        if (token == null) {
-            log.warn("WebSocket connection rejected: missing token parameter");
-            response.setStatusCode(HttpStatus.UNAUTHORIZED);
-            return false;
+        if (token != null) {
+            String userId = jwtValidator.extractUserId(token);
+            if (userId != null) {
+                attributes.put("userId", userId);
+                log.debug("Authenticated WebSocket handshake for user: {}", userId);
+            } else {
+                log.debug("WebSocket handshake with invalid/expired token");
+            }
+        } else {
+            log.debug("Anonymous WebSocket handshake");
         }
-
-        String userId = jwtValidator.extractUserId(token);
-        if (userId == null) {
-            log.warn("WebSocket connection rejected: invalid or expired JWT");
-            response.setStatusCode(HttpStatus.UNAUTHORIZED);
-            return false;
-        }
-
-        attributes.put("userId", userId);
         return true;
     }
 
