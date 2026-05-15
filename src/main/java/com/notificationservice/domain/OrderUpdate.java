@@ -19,6 +19,11 @@ public class OrderUpdate {
     String order_id;
 
     /**
+     * The platform user ID who owns the order.
+     */
+    String platform_user_id;
+
+    /**
      * The current status of the order (e.g., "FILLED", "PARTIALLY_FILLED", "CANCELED").
      */
     String status;

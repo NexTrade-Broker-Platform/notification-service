@@ -10,6 +10,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
+
 @Service
 @Slf4j
 @RequiredArgsConstructor
@@ -22,11 +24,25 @@ public class InternalOrderForwarder {
 
     public void forwardOrderUpdate(OrderUpdate orderUpdate) {
         try {
-            String url = "http://order-service/api/v1/orders/{orderId}/status";
+            String url = "http://order-service:9003/api/orders/{orderId}/status";
+
+            BigDecimal filledQty = orderUpdate.getFilled_quantity() != null
+                    ? new BigDecimal(orderUpdate.getFilled_quantity())
+                    : BigDecimal.ZERO;
+
+            OrderStatusUpdateRequest body = new OrderStatusUpdateRequest(
+                    orderUpdate.getStatus(),
+                    filledQty,
+                    orderUpdate.getAverage_fill_price(),
+                    filledQty,
+                    orderUpdate.getAverage_fill_price(),
+                    orderUpdate.getExchange_fee()
+            );
 
             HttpHeaders headers = new HttpHeaders();
             headers.set("X-INTERNAL-KEY", internalApiKey);
-            HttpEntity<OrderUpdate> entity = new HttpEntity<>(orderUpdate, headers);
+            headers.set("Content-Type", "application/json");
+            HttpEntity<OrderStatusUpdateRequest> entity = new HttpEntity<>(body, headers);
 
             restTemplate.exchange(url, HttpMethod.PUT, entity, Void.class, orderUpdate.getOrder_id());
             log.info("Order update forwarded successfully for order: {}", orderUpdate.getOrder_id());
@@ -35,4 +51,3 @@ public class InternalOrderForwarder {
         }
     }
 }
-

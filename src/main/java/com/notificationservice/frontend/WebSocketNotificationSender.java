@@ -1,6 +1,6 @@
 package com.notificationservice.frontend;
 
-import tools.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notificationservice.core.NotificationSender;
 import com.notificationservice.domain.MessageEnvelope;
 import com.notificationservice.service.SessionRegistryService;
@@ -75,6 +75,8 @@ public class WebSocketNotificationSender implements NotificationSender {
             String jsonMessage = objectMapper.writeValueAsString(message);
             session.sendMessage(new TextMessage(jsonMessage));
             log.debug("Message sent to session: {}", session.getId());
+        } catch (IllegalStateException e) {
+            log.warn("Failed to send message to session {} (already closed): {}", session.getId(), e.getMessage());
         } catch (IOException e) {
             log.error("Failed to send message to session: {}", session.getId(), e);
         }
