@@ -41,12 +41,26 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
 
     private String extractToken(ServerHttpRequest request) {
         String query = request.getURI().getQuery();
-        if (query == null) return null;
-        for (String param : query.split("&")) {
-            if (param.startsWith("token=")) {
-                return param.substring(6);
+        if (query != null) {
+            for (String param : query.split("&")) {
+                if (param.startsWith("token=")) {
+                    return param.substring(6);
+                }
             }
         }
+
+        String cookieHeader = request.getHeaders().getFirst("Cookie");
+        if (cookieHeader == null || cookieHeader.isBlank()) {
+            return null;
+        }
+
+        for (String cookie : cookieHeader.split(";")) {
+            String trimmedCookie = cookie.trim();
+            if (trimmedCookie.startsWith("jwt=")) {
+                return trimmedCookie.substring(4);
+            }
+        }
+
         return null;
     }
 }
