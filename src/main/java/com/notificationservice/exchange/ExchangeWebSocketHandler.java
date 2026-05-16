@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notificationservice.domain.MarketEvent;
 import com.notificationservice.domain.OrderUpdate;
 import com.notificationservice.domain.PriceUpdate;
+import com.notificationservice.service.ExchangeMarketStatusService;
 import com.notificationservice.service.MarketEventCacheService;
 import com.notificationservice.service.NotificationDispatcherService;
 import com.notificationservice.service.StockCacheService;
@@ -29,6 +30,7 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
     private final ObjectMapper objectMapper;
     private final StockCacheService stockCacheService;
     private final MarketEventCacheService marketEventCacheService;
+    private final ExchangeMarketStatusService exchangeMarketStatusService;
     private final List<String> tickers;
     private final Runnable onConnected;
     private final Runnable onDisconnect;
@@ -91,6 +93,10 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
 
     private void handleConnected(JsonNode json) {
         JsonNode p = json.path("payload");
+        exchangeMarketStatusService.recordConnected(
+                p.path("platform_id").asText(null),
+                p.path("server_market_time").asText(null)
+        );
         log.info("Connected to exchange. Platform ID: {}, Server Market Time: {}",
                 p.path("platform_id").asText("?"),
                 p.path("server_market_time").asText("?"));
@@ -101,6 +107,7 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
         String ticker = p.path("ticker").asText();
         BigDecimal price = new BigDecimal(p.path("price").asText("0"));
         int volume = (int) p.path("volume").asLong();
+        exchangeMarketStatusService.recordMarketTime(p.path("market_time").asText(null));
 
         stockCacheService.updatePrice(ticker, price, volume);
 
@@ -118,6 +125,7 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
 
     private void handleMarketEvent(JsonNode json) {
         JsonNode p = json.path("payload");
+        exchangeMarketStatusService.recordMarketTime(p.path("market_time").asText(null));
         MarketEvent marketEvent = MarketEvent.builder()
                 .event_id(p.path("event_id").asText())
                 .event_type(p.path("event_type").asText())
@@ -135,6 +143,7 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
 
     private void handleOrderUpdate(JsonNode json) {
         JsonNode p = json.path("payload");
+        exchangeMarketStatusService.recordMarketTime(p.path("market_time").asText(null));
         OrderUpdate orderUpdate = OrderUpdate.builder()
                 .order_id(p.path("order_id").asText())
                 .platform_user_id(p.has("platform_user_id") ? p.path("platform_user_id").asText() : null)
@@ -155,6 +164,7 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.warn("Exchange WebSocket closed: {}", status);
+        exchangeMarketStatusService.recordDisconnected();
         fireDisconnect();
     }
 
@@ -164,6 +174,7 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
         try {
             session.close();
         } catch (Exception ignored) {}
+        exchangeMarketStatusService.recordDisconnected();
         fireDisconnect();
     }
 
