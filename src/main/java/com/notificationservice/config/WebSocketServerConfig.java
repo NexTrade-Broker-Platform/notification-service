@@ -19,8 +19,8 @@ public class WebSocketServerConfig implements WebSocketConfigurer {
     private final SessionRegistryService sessionRegistryService;
     private final JwtValidator jwtValidator;
 
-    @Value("${cors.allowed-origins}")
-    private String allowedOrigins;
+    @Value("${cors.allowed-origin-patterns}")
+    private String allowedOriginPatterns;
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
@@ -30,8 +30,7 @@ public class WebSocketServerConfig implements WebSocketConfigurer {
         );
 
         registry.addHandler(handler, "/ws/notifications")
-                .setAllowedOrigins(allowedOrigins.split(","))
+                .setAllowedOriginPatterns(allowedOriginPatterns.split(","))
                 .addInterceptors(new JwtHandshakeInterceptor(jwtValidator));
     }
 }
-
