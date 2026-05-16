@@ -3,6 +3,7 @@ package com.notificationservice.exchange;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notificationservice.domain.StockData;
+import com.notificationservice.service.ExchangeMarketStatusService;
 import com.notificationservice.service.MarketEventCacheService;
 import com.notificationservice.service.NotificationDispatcherService;
 import com.notificationservice.service.StockCacheService;
@@ -38,6 +39,7 @@ public class ExchangeConnectionManager implements CommandLineRunner {
     private final RestTemplate restTemplate;
     private final StockCacheService stockCacheService;
     private final MarketEventCacheService marketEventCacheService;
+    private final ExchangeMarketStatusService exchangeMarketStatusService;
 
     @Value("${exchange.ws-host}")
     private String exchangeWsHost;
@@ -77,6 +79,7 @@ public class ExchangeConnectionManager implements CommandLineRunner {
                     objectMapper,
                     stockCacheService,
                     marketEventCacheService,
+                    exchangeMarketStatusService,
                     tickers,
                     this::onConnected,
                     this::scheduleReconnect

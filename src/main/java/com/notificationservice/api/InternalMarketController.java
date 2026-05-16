@@ -2,6 +2,7 @@ package com.notificationservice.api;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.notificationservice.service.ExchangeMarketStatusService;
 import com.notificationservice.service.MarketEventCacheService;
 import com.notificationservice.service.StockCacheService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class InternalMarketController {
 
     private final StockCacheService stockCacheService;
     private final MarketEventCacheService marketEventCacheService;
+    private final ExchangeMarketStatusService exchangeMarketStatusService;
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
@@ -59,6 +61,11 @@ public class InternalMarketController {
     @GetMapping("/events")
     public ResponseEntity<Map<String, Object>> getMarketEvents() {
         return ResponseEntity.ok(Map.of("events", marketEventCacheService.getAll()));
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> getMarketStatus() {
+        return ResponseEntity.ok(exchangeMarketStatusService.snapshot());
     }
 
     private HttpEntity<Void> exchangeHeaders() {
