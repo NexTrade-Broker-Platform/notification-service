@@ -3,6 +3,7 @@ package com.notificationservice.api;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.notificationservice.service.ExchangeMarketStatusService;
+import com.notificationservice.service.ExchangeMarketStatusService.ExchangeMarketStatusSnapshot;
 import com.notificationservice.service.MarketEventCacheService;
 import com.notificationservice.service.StockCacheService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 
 import java.util.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 
 @RestController
 @RequestMapping("/internal/market")
@@ -65,7 +71,37 @@ public class InternalMarketController {
 
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getMarketStatus() {
-        return ResponseEntity.ok(exchangeMarketStatusService.snapshot());
+        ExchangeMarketStatusSnapshot snapshot = exchangeMarketStatusService.snapshot();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("connection_status", snapshot.connectionStatus());
+        body.put("exchange_connected", snapshot.exchangeConnected());
+        body.put("platform_id", snapshot.platformId());
+        body.put("last_sync_market_time", snapshot.lastSyncMarketTime());
+        body.put("last_sync_at", snapshot.lastSyncAt());
+
+        Map<String, Object> exchangeStatus = fetchExchangeMarketStatus();
+        if (exchangeStatus != null) {
+            body.putAll(exchangeStatus);
+            if (snapshot.marketTime() != null) {
+                body.put("market_time", snapshot.marketTime());
+                body.put("market_date", snapshot.marketDate());
+            } else if (!body.containsKey("market_date")) {
+                body.put("market_date", toMarketDate((String) body.get("market_time")));
+            }
+            return ResponseEntity.ok(body);
+        }
+
+        boolean isOpen = snapshot.exchangeConnected()
+                && snapshot.speedMultiplier() != null
+                && snapshot.speedMultiplier().compareTo(java.math.BigDecimal.ZERO) > 0;
+        body.put("market_status", isOpen ? "OPEN" : "CLOSED");
+        body.put("is_open", isOpen);
+        body.put("market_time", snapshot.marketTime());
+        body.put("market_date", snapshot.marketDate());
+        body.put("real_time", null);
+        body.put("speed_multiplier", snapshot.speedMultiplier());
+        body.put("active_event", null);
+        return ResponseEntity.ok(body);
     }
 
     private HttpEntity<Void> exchangeHeaders() {
@@ -128,6 +164,60 @@ public class InternalMarketController {
         } catch (Exception e) {
             log.warn("Failed to fetch history for {}: {}", ticker, e.getMessage());
             return List.of();
+        }
+    }
+
+    private Map<String, Object> fetchExchangeMarketStatus() {
+        try {
+            String url = exchangeRestUrl + "/api/v1/market/status";
+            ResponseEntity<String> resp = restTemplate.exchange(url, HttpMethod.GET, exchangeHeaders(), String.class);
+            String response = resp.getBody();
+            if (response == null || response.isBlank()) {
+                return null;
+            }
+
+            JsonNode node = objectMapper.readTree(response);
+            Map<String, Object> status = new LinkedHashMap<>();
+            boolean isOpen = node.path("is_open").asBoolean(false);
+            String marketTime = node.path("market_time").asText(null);
+            status.put("market_status", isOpen ? "OPEN" : "CLOSED");
+            status.put("is_open", isOpen);
+            status.put("market_time", marketTime);
+            status.put("market_date", toMarketDate(marketTime));
+            status.put("real_time", node.path("real_time").isMissingNode() ? null : node.path("real_time").asText(null));
+            status.put("speed_multiplier", node.path("speed_multiplier").isMissingNode() ? null : node.path("speed_multiplier").decimalValue());
+            status.put("active_event", node.path("active_event").isNull() ? null : objectMapper.convertValue(node.path("active_event"), Map.class));
+            return status;
+        } catch (Exception e) {
+            log.warn("Failed to fetch exchange market status: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String toMarketDate(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+
+        try {
+            return OffsetDateTime.parse(raw).toLocalDate().toString();
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return LocalDateTime.parse(raw).toLocalDate().toString();
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return java.time.Instant.parse(raw).atZone(ZoneOffset.UTC).toLocalDate().toString();
+        } catch (DateTimeParseException ignored) {
+        }
+
+        try {
+            return LocalDate.parse(raw).toString();
+        } catch (DateTimeParseException ignored) {
+            return null;
         }
     }
 }
