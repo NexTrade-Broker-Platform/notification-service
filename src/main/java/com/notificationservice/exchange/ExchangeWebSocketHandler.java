@@ -154,10 +154,10 @@ public class ExchangeWebSocketHandler extends TextWebSocketHandler {
                 .market_time(p.path("market_time").asText())
                 .build();
 
-        internalOrderForwarder.forwardOrderUpdate(orderUpdate);
+        OrderUpdate enriched = internalOrderForwarder.forwardOrderUpdate(orderUpdate);
 
-        if (orderUpdate.getPlatform_user_id() != null && !orderUpdate.getPlatform_user_id().isEmpty()) {
-            notificationDispatcherService.dispatchOrderUpdate(orderUpdate.getPlatform_user_id(), orderUpdate);
+        if (enriched.getPlatform_user_id() != null && !enriched.getPlatform_user_id().isEmpty()) {
+            notificationDispatcherService.dispatchOrderUpdate(enriched.getPlatform_user_id(), enriched);
         }
     }
 

@@ -47,4 +47,13 @@ public class OrderUpdate {
      * The timestamp of the last order update, in ISO-8601 format.
      */
     String market_time;
+
+    /** BUY or SELL — populated from order-service lookup */
+    String side;
+
+    /** MARKET or LIMIT — populated from order-service lookup */
+    String order_type;
+
+    /** Ticker / instrument identifier — populated from order-service lookup */
+    String instrument_id;
 }
