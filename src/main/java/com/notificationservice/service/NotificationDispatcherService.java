@@ -6,6 +6,7 @@ import com.notificationservice.domain.MessageEnvelope;
 import com.notificationservice.domain.OrderUpdate;
 import com.notificationservice.domain.PriceUpdate;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NotificationDispatcherService {
 
     private final NotificationSender notificationSender;
@@ -27,6 +29,8 @@ public class NotificationDispatcherService {
      * @param update         The order update payload.
      */
     public void dispatchOrderUpdate(String platformUserId, OrderUpdate update) {
+        log.info("DISPATCHING ORDER_UPDATE: order={}, user={}, status={}, type={}", 
+            update.getOrder_id(), platformUserId, update.getStatus(), update.getOrder_type());
         MessageEnvelope<OrderUpdate> envelope = MessageEnvelope.<OrderUpdate>builder()
                 .type("ORDER_UPDATE")
                 .payload(update)

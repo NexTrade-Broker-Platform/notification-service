@@ -1,6 +1,7 @@
 package com.notificationservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -27,12 +28,15 @@ public class ApplicationConfig {
 
     /**
      * Creates an ObjectMapper bean for JSON serialization and deserialization.
+     * Configured to use snake_case for consistent communication with the frontend.
      *
      * @return A new ObjectMapper instance.
      */
     @Bean
     public ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        return mapper;
     }
 }
 
